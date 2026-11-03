@@ -1,0 +1,12 @@
+DECLARACIÓN DE USO DE INTELIGENCIA ARTIFICIAL
+
+En este proyecto se utilizó inteligencia artificial generativa para
+facilitar la generación, debuggeo y documentación del código. Todo lo generado con la
+herramienta fue revisado por el equipo y no afecta a nuestro manejo de los contenidos asociados
+a la solución propuesta.
+
+El seguidor KCF de src/seguidores no es de autoría propia: fue adaptado al proyecto y conserva
+su licencia original (src/seguidores/LICENSE).
+
+El bloque de control y percepción fue realizado por Gabriel Fuentes, integrante que asume
+cualquier responsabilidad asociada a estos códigos.

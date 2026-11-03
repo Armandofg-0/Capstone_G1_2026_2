@@ -1,0 +1,21 @@
+# Arranque automatico de la torreta.
+# Instalar: sudo cp tools/pi/torreta.service /etc/systemd/system/ && sudo systemctl enable --now torreta
+#
+# Codigos de salida: 3 = reinicio del programa pedido desde el dashboard (Restart=always lo
+# relanza); 4 = reiniciar la Pi y 6 = apagarla (lo hace ExecStopPost, que con "+" corre como root).
+[Unit]
+Description=Torreta pan-tilt (vision, estimacion y control)
+After=cpu-performance.service network-online.target
+Wants=cpu-performance.service network-online.target
+
+[Service]
+User=armandofg-0
+WorkingDirectory=/home/armandofg-0/control
+ExecStart=/home/armandofg-0/control/build/torreta dashboard.habilitado=true dashboard.escucha=0.0.0.0
+ExecStopPost=+/bin/sh -c 'if [ "$EXIT_STATUS" = 4 ]; then systemctl reboot; elif [ "$EXIT_STATUS" = 6 ]; then systemctl poweroff; fi'
+Restart=always
+RestartSec=2
+SuccessExitStatus=3 4 6
+
+[Install]
+WantedBy=multi-user.target

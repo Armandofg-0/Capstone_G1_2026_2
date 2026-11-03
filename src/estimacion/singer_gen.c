@@ -1,0 +1,130 @@
+// GENERADO por codegen/singer.py (sympy). No editar a mano: cambiar el script y volver
+// a correrlo.
+#include "singer_gen.h"
+
+#include <math.h>
+
+void singer_FQ(double dt, double tau_m, double sigma_m, double F[9], double Q[9])
+{
+    const double a = 1.0 / tau_m;
+    const double b = a * dt;
+    if (b < 0.5) {
+        // Serie de Taylor en b = Delta t/tau_m (orden 16).
+        const double ft0 = pow(dt, 2);
+        const double ft1 = pow(b, 2);
+        const double ft2 = pow(b, 3);
+        const double ft3 = pow(b, 4);
+        const double ft4 = pow(b, 5);
+        const double ft5 = pow(b, 6);
+        const double ft6 = pow(b, 7);
+        const double ft7 = pow(b, 8);
+        const double ft8 = pow(b, 9);
+        const double ft9 = pow(b, 10);
+        const double ft10 = pow(b, 11);
+        const double ft11 = pow(b, 12);
+        const double ft12 = pow(b, 13);
+        const double ft13 = pow(b, 14);
+        const double ft14 = pow(b, 15);
+        const double ft15 = pow(b, 16);
+        F[0] = 1;
+        F[1] = dt;
+        F[2] = -1.0/6.0*b*ft0 + (1.0/24.0)*ft0*ft1 - 1.0/6227020800.0*ft0*ft10 + (1.0/87178291200.0)*ft0*ft11 - 1.0/1307674368000.0*ft0*ft12 + (1.0/20922789888000.0)*ft0*ft13 - 1.0/355687428096000.0*ft0*ft14 + (1.0/6402373705728000.0)*ft0*ft15 - 1.0/120.0*ft0*ft2 + (1.0/720.0)*ft0*ft3 - 1.0/5040.0*ft0*ft4 + (1.0/40320.0)*ft0*ft5 - 1.0/362880.0*ft0*ft6 + (1.0/3628800.0)*ft0*ft7 - 1.0/39916800.0*ft0*ft8 + (1.0/479001600.0)*ft0*ft9 + (1.0/2.0)*ft0;
+        F[3] = 0;
+        F[4] = 1;
+        F[5] = -1.0/2.0*b*dt + (1.0/6.0)*dt*ft1 - 1.0/479001600.0*dt*ft10 + (1.0/6227020800.0)*dt*ft11 - 1.0/87178291200.0*dt*ft12 + (1.0/1307674368000.0)*dt*ft13 - 1.0/20922789888000.0*dt*ft14 + (1.0/355687428096000.0)*dt*ft15 - 1.0/24.0*dt*ft2 + (1.0/120.0)*dt*ft3 - 1.0/720.0*dt*ft4 + (1.0/5040.0)*dt*ft5 - 1.0/40320.0*dt*ft6 + (1.0/362880.0)*dt*ft7 - 1.0/3628800.0*dt*ft8 + (1.0/39916800.0)*dt*ft9 + dt;
+        F[6] = 0;
+        F[7] = 0;
+        F[8] = -b + (1.0/2.0)*ft1 - 1.0/39916800.0*ft10 + (1.0/479001600.0)*ft11 - 1.0/6227020800.0*ft12 + (1.0/87178291200.0)*ft13 - 1.0/1307674368000.0*ft14 + (1.0/20922789888000.0)*ft15 - 1.0/6.0*ft2 + (1.0/24.0)*ft3 - 1.0/120.0*ft4 + (1.0/720.0)*ft5 - 1.0/5040.0*ft6 + (1.0/40320.0)*ft7 - 1.0/362880.0*ft8 + (1.0/3628800.0)*ft9 + 1;
+        const double qt0 = pow(dt, 4);
+        const double qt1 = pow(sigma_m, 2);
+        const double qt2 = pow(b, 2);
+        const double qt3 = pow(b, 3);
+        const double qt4 = pow(b, 4);
+        const double qt5 = qt1*qt4;
+        const double qt6 = pow(b, 5);
+        const double qt7 = pow(b, 6);
+        const double qt8 = qt1*qt7;
+        const double qt9 = pow(b, 7);
+        const double qt10 = pow(b, 8);
+        const double qt11 = qt1*qt10;
+        const double qt12 = pow(b, 9);
+        const double qt13 = pow(b, 10);
+        const double qt14 = qt1*qt13;
+        const double qt15 = pow(b, 11);
+        const double qt16 = pow(b, 12);
+        const double qt17 = qt1*qt16;
+        const double qt18 = pow(b, 13);
+        const double qt19 = pow(b, 14);
+        const double qt20 = qt1*qt19;
+        const double qt21 = pow(b, 15);
+        const double qt22 = pow(b, 16);
+        const double qt23 = qt1*qt22;
+        const double qt24 = pow(dt, 3);
+        const double qt25 = (1.0/4.0)*b*qt1*qt24 + (37.0/4354560.0)*qt1*qt12*qt24 + (629.0/3353011200.0)*qt1*qt15*qt24 + (1213.0/387459072000.0)*qt1*qt18*qt24 - 1.0/6.0*qt1*qt2*qt24 + (593.0/14485008384000.0)*qt1*qt21*qt24 + (5.0/72.0)*qt1*qt24*qt3 + (17.0/2880.0)*qt1*qt24*qt6 + (167.0/604800.0)*qt1*qt24*qt9 - 23.0/453600.0*qt11*qt24 - 157.0/119750400.0*qt14*qt24 - 31.0/1238328000.0*qt17*qt24 - 1927.0/5230697472000.0*qt20*qt24 - 3449.0/800296713216000.0*qt23*qt24 - 1.0/45.0*qt24*qt5 - 41.0/30240.0*qt24*qt8;
+        const double qt26 = pow(dt, 2);
+        const double qt27 = qt1*qt26;
+        const double qt28 = qt26*qt5;
+        const double qt29 = qt26*qt8;
+        const double qt30 = qt11*qt26;
+        const double qt31 = qt14*qt26;
+        const double qt32 = qt17*qt26;
+        const double qt33 = qt20*qt26;
+        const double qt34 = qt23*qt26;
+        const double qt35 = (1.0/3.0)*b*qt1*qt26 + (1013.0/19958400.0)*qt1*qt12*qt26 + (1361.0/1037836800.0)*qt1*qt15*qt26 + (16369.0/653837184000.0)*qt1*qt18*qt26 + (65519.0/177843714048000.0)*qt1*qt21*qt26 + (11.0/60.0)*qt1*qt26*qt3 + (19.0/840.0)*qt1*qt26*qt6 + (247.0/181440.0)*qt1*qt26*qt9 - 1.0/3.0*qt2*qt27 - 13.0/180.0*qt28 - 1.0/168.0*qt29 - 251.0/907200.0*qt30 - 509.0/59875200.0*qt31 - 1363.0/7264857600.0*qt32 - 2047.0/653837184000.0*qt33 - 851.0/20786927616000.0*qt34;
+        const double qt36 = dt*qt1;
+        const double qt37 = b*dt*qt1 + (73.0/259200.0)*dt*qt1*qt12 + (2047.0/239500800.0)*dt*qt1*qt15 + (8191.0/43589145600.0)*dt*qt1*qt18 + (4681.0/1494484992000.0)*dt*qt1*qt21 + (7.0/12.0)*dt*qt1*qt3 + (31.0/360.0)*dt*qt1*qt6 + (127.0/20160.0)*dt*qt1*qt9 - 17.0/12096.0*qt10*qt36 - 31.0/604800.0*qt13*qt36 - 1.0/760320.0*qt16*qt36 - 5461.0/217945728000.0*qt19*qt36 - qt2*qt36 - 257.0/697426329600.0*qt22*qt36 - 1.0/4.0*qt36*qt4 - 1.0/40.0*qt36*qt7;
+        Q[0] = (1.0/10.0)*b*qt0*qt1 + (37.0/28304640.0)*qt0*qt1*qt12 + (629.0/25147584000.0)*qt0*qt1*qt15 + (1213.0/3293402112000.0)*qt0*qt1*qt18 - 1.0/18.0*qt0*qt1*qt2 + (593.0/137607579648000.0)*qt0*qt1*qt21 + (5.0/252.0)*qt0*qt1*qt3 + (17.0/12960.0)*qt0*qt1*qt6 + (167.0/3326400.0)*qt0*qt1*qt9 - 23.0/2721600.0*qt0*qt11 - 157.0/838252800.0*qt0*qt14 - 31.0/9906624000.0*qt0*qt17 - 1927.0/47076277248000.0*qt0*qt20 - 3449.0/8002967132160000.0*qt0*qt23 - 1.0/180.0*qt0*qt5 - 41.0/151200.0*qt0*qt8;
+        Q[1] = qt25;
+        Q[2] = qt35;
+        Q[3] = qt25;
+        Q[4] = (2.0/3.0)*b*qt1*qt26 + (73.0/1425600.0)*qt1*qt12*qt26 + (2047.0/1556755200.0)*qt1*qt15*qt26 + (8191.0/326918592000.0)*qt1*qt18*qt26 + (4681.0/12703122432000.0)*qt1*qt21*qt26 + (7.0/30.0)*qt1*qt26*qt3 + (31.0/1260.0)*qt1*qt26*qt6 + (127.0/90720.0)*qt1*qt26*qt9 - 1.0/2.0*qt2*qt27 - 1.0/12.0*qt28 - 1.0/160.0*qt29 - 17.0/60480.0*qt30 - 31.0/3628800.0*qt31 - 1.0/5322240.0*qt32 - 5461.0/1743565824000.0*qt33 - 257.0/6276836966400.0*qt34;
+        Q[5] = qt37;
+        Q[6] = qt35;
+        Q[7] = qt37;
+        Q[8] = 2*b*qt1 + (4.0/2835.0)*qt1*qt12 + (8.0/155925.0)*qt1*qt15 + (8.0/6081075.0)*qt1*qt18 - 2*qt1*qt2 + (16.0/638512875.0)*qt1*qt21 + (4.0/3.0)*qt1*qt3 + (4.0/15.0)*qt1*qt6 + (8.0/315.0)*qt1*qt9 - 2.0/315.0*qt11 - 4.0/14175.0*qt14 - 4.0/467775.0*qt17 - 8.0/42567525.0*qt20 - 2.0/638512875.0*qt23 - 2.0/3.0*qt5 - 4.0/45.0*qt8;
+    } else {
+        const double ft0 = pow(a, -2);
+        const double ft1 = 1.0/a;
+        const double ft2 = exp(-a*dt);
+        F[0] = 1;
+        F[1] = dt;
+        F[2] = dt*ft1 + ft0*ft2 - ft0;
+        F[3] = 0;
+        F[4] = 1;
+        F[5] = -ft1*ft2 + ft1;
+        F[6] = 0;
+        F[7] = 0;
+        F[8] = ft2;
+        const double qt0 = pow(sigma_m, 2);
+        const double qt1 = qt0/pow(a, 4);
+        const double qt2 = 2*qt0;
+        const double qt3 = pow(a, -3);
+        const double qt4 = dt*qt3;
+        const double qt5 = pow(dt, 2);
+        const double qt6 = pow(a, 2);
+        const double qt7 = 1.0/qt6;
+        const double qt8 = 1.0/a;
+        const double qt9 = a*dt;
+        const double qt10 = 2*qt9;
+        const double qt11 = exp(-qt10);
+        const double qt12 = exp(qt9);
+        const double qt13 = 2*qt12;
+        const double qt14 = exp(qt10);
+        const double qt15 = qt10*qt14;
+        const double qt16 = qt14 + 1;
+        const double qt17 = qt0*qt11;
+        const double qt18 = qt17*qt3*(qt13*(qt9 - 1) + qt14*qt5*qt6 - qt15 + qt16);
+        const double qt19 = qt17*qt7;
+        const double qt20 = qt19*(-qt13*qt9 + qt14 - 1);
+        const double qt21 = qt17*qt8*(-qt13 + qt16);
+        Q[0] = (2.0/3.0)*pow(dt, 3)*qt0*qt8 - 4*qt0*qt4*exp(-qt9) - qt1*qt11 + qt1 + qt2*qt4 - qt2*qt5*qt7;
+        Q[1] = qt18;
+        Q[2] = qt20;
+        Q[3] = qt18;
+        Q[4] = qt19*(4*qt12 - 3*qt14 + qt15 - 1);
+        Q[5] = qt21;
+        Q[6] = qt20;
+        Q[7] = qt21;
+        Q[8] = qt0 - qt17;
+    }
+}

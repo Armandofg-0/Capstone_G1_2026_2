@@ -1,0 +1,1108 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>torreta - dashboard</title>
+<style>
+/* Tokens: paleta azul marino, azul petroleo y celeste; --acento es el marino de la barra y de
+   los titulos. Estados reservados. El modo oscuro sigue prefers-color-scheme. */
+:root {
+  color-scheme: light dark;
+  --page: #eef4f8; --surface: #ffffff; --surface-2: #e3edf3;
+  --ink: #0f2f45; --ink-2: #3d5a6e; --muted: #6b8597;
+  --grid: #d6e3eb; --axis: #b4c8d5; --border: rgba(15,47,69,.14);
+  --acento: #123e5c; --acento-ink: #ffffff; --acento-2: #2a86b0;
+  --s1: #1f6f9a; --s2: #4fb3d9; --s3: #0f3b57;
+  --good: #1d8a5a; --warning: #c98a00; --critical: #d03b3b;
+  --video-bg: #0a1a26;
+  --ov-s: #ffffff; --ov-z: #ff9a5c; --ov-est: #6fd0f5; --ov-hor: #9be04a; --ov-fov: #ff6b6b;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #07141e; --surface: #0e2232; --surface-2: #13293b;
+    --ink: #e8f2f8; --ink-2: #a9c3d3; --muted: #7d98aa;
+    --grid: #1c3446; --axis: #2a4558; --border: rgba(160,205,230,.14);
+    --acento: #0b2a40; --acento-ink: #e8f2f8; --acento-2: #4fb3d9;
+    --s1: #4fb3d9; --s2: #9fdcf2; --s3: #2a86b0;
+    --good: #3cc28a; --warning: #fab219; --critical: #ef5a5a;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--page); color: var(--ink);
+  font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-variant-numeric: tabular-nums; overflow-x: hidden;
+}
+button, select, summary { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--s1); outline-offset: 2px; }
+
+/* Barra superior */
+#barra {
+  position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center;
+  gap: 6px 18px; padding: 8px 16px; background: var(--acento); color: var(--acento-ink);
+  border-bottom: 3px solid var(--acento-2);
+}
+#barra h1 { margin: 0; font-size: 15px; font-weight: 650; letter-spacing: .04em; }
+.campo { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.campo > span:first-child { color: var(--acento-ink); opacity: .7; font-size: 12px; }
+#barra #nivel, #barra details.capas summary { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.3); }
+#barra #nivel option { color: var(--ink); background: var(--surface); }
+#barra details.capas .menu { color: var(--ink); }
+#barra #conexion { color: var(--acento-ink); opacity: .75; margin-left: 0; }
+#barra #conexion.mal { color: #ffb3b3; opacity: 1; }
+.campo b { font-weight: 600; }
+#nivel { padding: 3px 6px; border: 1px solid var(--axis); border-radius: 4px; background: var(--surface-2); }
+#candado { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; }
+#candado[hidden], #nivel[hidden] { display: none; }
+#candado svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; }
+#edad-actual { font-size: 18px; font-weight: 650; }
+#parada { margin-left: auto; padding: 5px 12px; border: 2px solid #fff; border-radius: 5px; background: #c62828;
+  color: #fff; font-weight: 700; letter-spacing: .03em; cursor: pointer; }
+#parada:active { background: #8e1c1c; }
+#conexion { font-size: 12px; color: var(--muted); }
+#conexion.mal { color: var(--critical); font-weight: 600; }
+details.capas { position: relative; }
+details.capas summary { cursor: pointer; padding: 3px 8px; border: 1px solid var(--axis); border-radius: 4px; list-style: none; background: var(--surface-2); }
+details.capas summary::-webkit-details-marker { display: none; }
+details.capas .menu {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 6; min-width: 220px; padding: 8px 10px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.18);
+}
+.menu label { display: flex; align-items: center; gap: 8px; padding: 3px 0; cursor: pointer; }
+.menu i { width: 12px; height: 3px; border-radius: 2px; display: inline-block; }
+.menu small { color: var(--muted); margin-left: auto; }
+
+/* Cuerpo */
+main { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; padding: 16px; align-items: start; }
+#video-col { position: sticky; top: 58px; min-width: 0; }
+#marco { position: relative; background: var(--video-bg); border-radius: 6px; overflow: hidden; aspect-ratio: 4 / 3; }
+#lienzo { display: block; width: 100%; height: 100%; touch-action: none; }
+#sin-video {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  color: #c3c2b7; font-size: 14px; text-align: center; padding: 16px;
+}
+#sin-video[hidden] { display: none; }
+#leyenda { margin: 8px 2px 0; color: var(--ink-2); font-size: 12px; display: flex; flex-wrap: wrap; gap: 4px 14px; }
+#leyenda span { display: inline-flex; align-items: center; gap: 5px; }
+#leyenda i { width: 10px; height: 3px; border-radius: 2px; display: inline-block; box-shadow: 0 0 0 1px rgba(0,0,0,.45); }
+#nota-rumbo { color: var(--muted); }
+#guia { margin-top: 10px; background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--acento-2); border-radius: 6px; padding: 8px 12px; }
+#guia summary { cursor: pointer; font-weight: 650; color: var(--s3); }
+#guia dl { display: grid; grid-template-columns: 110px 1fr; gap: 6px 12px; margin: 10px 0 4px; font-size: 12.5px; }
+#guia dt { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+#guia dt i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; box-shadow: 0 0 0 1px rgba(0,0,0,.45); }
+#guia dd { margin: 0; color: var(--ink-2); }
+#guia h3 { margin: 12px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+
+#paneles { display: grid; gap: 10px; min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--acento-2); border-radius: 6px; padding: 10px 12px; min-width: 0; }
+.panel.inactivo { border-left-color: var(--axis); }
+.panel h2 { margin: 0 0 6px; font-size: 13px; font-weight: 650; color: var(--s3); text-transform: uppercase; letter-spacing: .05em; display: flex; justify-content: space-between; align-items: baseline; }
+.panel h2 small { font-weight: 400; color: var(--muted); }
+.panel.inactivo { background: var(--surface-2); }
+.panel.inactivo h2 { color: var(--muted); }
+.panel .apagado { display: none; color: var(--muted); font-style: italic; }
+.panel.inactivo .apagado { display: block; }
+.panel.inactivo .cuerpo { display: none; }
+dl.kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0 0 6px; }
+dl.kv dt { color: var(--muted); }
+dl.kv dd { margin: 0; text-align: right; font-weight: 550; overflow-wrap: anywhere; }
+dd.solo4 { color: var(--muted); font-weight: 400; }
+canvas.spark { display: block; width: 100%; height: 48px; }
+.rotulo { display: flex; flex-wrap: wrap; gap: 2px 12px; color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+.rotulo i { display: inline-block; width: 10px; height: 2px; vertical-align: middle; margin-right: 4px; border-radius: 1px; }
+.barras { display: grid; gap: 3px; margin-bottom: 6px; }
+.barra-cpu { display: grid; grid-template-columns: 34px 1fr 40px; gap: 8px; align-items: center; font-size: 12px; }
+.barra-cpu div { height: 6px; background: var(--grid); border-radius: 3px; overflow: hidden; }
+.barra-cpu div i { display: block; height: 100%; background: var(--s1); border-radius: 3px; }
+
+.chequeo { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 3px; }
+.chequeo li { display: flex; gap: 8px; align-items: baseline; }
+.chequeo li::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); transform: translateY(-1px); }
+.chequeo li.ok::before { background: var(--good); }
+.chequeo li.aviso::before { background: var(--warning); }
+.chequeo li.mal::before { background: var(--critical); }
+.chequeo small { color: var(--muted); margin-left: auto; text-align: right; }
+#form-ajustes { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: center; margin: 6px 0 8px; font-size: 12.5px; }
+#form-ajustes label { color: var(--muted); }
+#form-ajustes input { width: 100%; min-width: 0; padding: 3px 6px; border: 1px solid var(--axis); border-radius: 4px; background: var(--surface-2); color: var(--ink); font: inherit; }
+.botones { display: flex; flex-wrap: wrap; gap: 6px; }
+.botones button { padding: 5px 10px; border-radius: 4px; border: 1px solid var(--acento-2); background: var(--acento); color: var(--acento-ink); cursor: pointer; }
+.botones button.secundario { background: transparent; color: var(--ink); border-color: var(--axis); }
+#sis-msg { font-size: 12px; color: var(--muted); margin-top: 6px; min-height: 1em; }
+#tabla-calib { width: 100%; border-collapse: collapse; font-size: 12.5px; margin: 4px 0 8px; }
+#tabla-calib th, #tabla-calib td { padding: 3px 4px; text-align: right; border-bottom: 1px solid var(--grid); }
+#tabla-calib th:first-child, #tabla-calib td:first-child { text-align: left; }
+.trote { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin: 3px 0; font-size: 12px; }
+.trote b { min-width: 34px; }
+.trote button, #p-calib .botones button { padding: 3px 8px; font-size: 12px; }
+#p-calib button:disabled { opacity: .45; cursor: not-allowed; }
+#calib-estado { font-size: 12.5px; margin-bottom: 4px; }
+#calib-n4 { font-size: 12px; color: var(--muted); margin-top: 6px; }
+details.config summary { cursor: pointer; color: var(--s1); font-size: 12.5px; margin: 4px 0; }
+
+@media (max-width: 900px) {
+  main { grid-template-columns: minmax(0, 1fr); padding: 12px; }
+  #video-col { position: static; }
+  #barra { padding: 8px 12px; gap: 6px 12px; }
+  #conexion { margin-left: 0; }
+  details.capas .menu { right: auto; left: 0; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<header id="barra">
+  <h1>torreta</h1>
+  <label class="campo" id="campo-nivel"><span>nivel</span>
+    <select id="nivel" aria-label="Nivel de operacion">
+      <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option>
+    </select>
+    <span id="candado" hidden title="Arranco en el nivel 4: no se puede cambiar desde la pagina">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+      <span id="candado-n">4</span>
+    </span>
+  </label>
+  <div class="campo"><span>fuente</span><b id="b-fuente">-</b></div>
+  <div class="campo"><span>perfil</span><b id="b-perfil">-</b></div>
+  <div class="campo"><span>edad</span><b id="edad-actual">-</b><span>ms</span><span>p99</span><b id="edad-p99">-</b></div>
+  <div class="campo"><span>fps</span><b id="b-fps">-</b></div>
+  <div class="campo"><span>descartes</span><b id="b-desc">0</b></div>
+  <details class="capas" id="capas"><summary>Capas</summary><div class="menu" id="menu-capas"></div></details>
+  <button id="parada" title="Deshabilita los drivers de la ESP32 al instante">PARADA</button>
+  <span id="conexion" role="status">conectando...</span>
+</header>
+
+<main>
+  <section id="video-col" aria-label="Video">
+    <div id="marco">
+      <canvas id="lienzo" width="640" height="480"></canvas>
+      <div id="sin-video">Esperando el primer cuadro</div>
+    </div>
+    <div id="leyenda"></div>
+    <details id="guia">
+      <summary>¿Qué es cada cosa?</summary>
+      <h3>Sobre el video</h3>
+      <dl>
+        <dt><i style="background:var(--ov-s)"></i>Cruz «s*»</dt>
+        <dd>Referencia: el punto de la imagen donde se quiere tener el blanco (normalmente el centro). Siempre visible.</dd>
+        <dt><i style="background:var(--ov-z)"></i>Cruz chica</dt>
+        <dd>Medición z: dónde el detector vio el blanco en este cuadro. El círculo alrededor es su incertidumbre (sigma, en px): más grande = medición menos confiable. Nivel 1+.</dd>
+        <dt><i style="background:var(--ov-z)"></i>Rectángulo punteado</dt>
+        <dd>Ventana del seguidor: la zona donde se busca el blanco mientras está enganchado. Si desaparece, se está buscando en toda la imagen. Nivel 1+.</dd>
+        <dt><i style="background:var(--ov-est)"></i>Punto y elipse</dt>
+        <dd>Estimación ŝ del EKF: dónde el filtro cree que está el blanco. La elipse es la puerta chi²: una medición fuera de ella se rechaza como atípica. Nivel 2+.</dd>
+        <dt><i style="background:var(--ov-hor)"></i>Línea con puntos</dt>
+        <dd>Horizonte del NMPC: la trayectoria que el controlador predice para el blanco en la imagen durante los próximos pasos. Apunta hacia donde se moverá; es aproximada (rumbo ≈ píxel). Nivel 3+.</dd>
+        <dt><i style="background:var(--ov-fov)"></i>Octágonos</dt>
+        <dd>Campo de visión útil que el NMPC obliga a respetar. Punteado: el límite nominal. Continuo: el límite efectivo, encogido por los márgenes. Nivel 3+.</dd>
+      </dl>
+      <h3>Paneles</h3>
+      <dl>
+        <dt>Latencia</dt><dd>Edad del cuadro: tiempo desde la captura hasta que se dibuja en pantalla.</dd>
+        <dt>Percepción</dt><dd>Estado del detector, su sigma y cuánto tarda por cuadro.</dd>
+        <dt>Estimación</dt><dd>NIS: qué tan sorprendente fue la medición para el filtro; debería rondar la línea nis_ref. mu: peso de los modos reposo / barrido del IMM.</dd>
+        <dt>Control</dt><dd>Si el NMPC encontró solución, la holgura de FOV y el tiempo del RTI frente al presupuesto Delta_fb.</dd>
+        <dt>Comunicación</dt><dd>Envío del plan a la ESP32; casi todo se activa solo en el nivel 4.</dd>
+        <dt>Equipo</dt><dd>CPU por núcleo, memoria, temperatura y throttling de la Pi.</dd>
+      </dl>
+      <p style="margin:6px 0 0;font-size:12px;color:var(--muted)">Los elementos se pueden ocultar desde el menú «Capas». Lo que aparece depende del nivel elegido.</p>
+    </details>
+  </section>
+
+  <aside id="paneles" aria-label="Paneles">
+    <section class="panel" id="p-sistema">
+      <h2>Sistema <small id="sis-resumen">-</small></h2>
+      <ul class="chequeo" id="chequeo"></ul>
+      <details class="config"><summary>Configuración y reinicio</summary>
+        <div id="form-ajustes"></div>
+        <div class="botones">
+          <button id="b-guardar">Guardar y reiniciar</button>
+          <button id="b-reiniciar" class="secundario">Reiniciar programa</button>
+          <button id="b-reiniciar-pi" class="secundario">Reiniciar la Pi</button>
+          <button id="b-reiniciar-esp" class="secundario">Reiniciar la ESP32</button>
+          <button id="b-apagar-pi" class="secundario">Apagar la Pi</button>
+        </div>
+        <div id="sis-msg">Guardar escribe config/ajustes.ini y reinicia el programa: nada se cambia en caliente.</div>
+      </details>
+    </section>
+    <section class="panel" id="p-calib">
+      <h2>Calibración y nivel 4 <small id="calib-resumen">-</small></h2>
+      <div id="calib-estado">-</div>
+      <div id="calib-sensores" style="font-size:12px;color:var(--muted)">-</div>
+      <table id="tabla-calib">
+        <tr><th>Eje</th><th>Pose</th><th>Mínimo</th><th>Máximo</th><th>Sentido</th></tr>
+        <tr><td>Pan</td><td id="cq0">-</td><td id="cmin0">-</td><td id="cmax0">-</td><td id="csen0">-</td></tr>
+        <tr><td>Tilt</td><td id="cq1">-</td><td id="cmin1">-</td><td id="cmax1">-</td><td id="csen1">-</td></tr>
+      </table>
+      <div class="trote" data-eje="0"><b>Pan</b>
+        <button data-g="-10">−10°</button><button data-g="-1">−1°</button><button data-g="1">+1°</button><button data-g="10">+10°</button>
+        <button data-o="5" class="secundario">fijar mín.</button><button data-o="6" class="secundario">fijar máx.</button><button data-o="10" class="secundario">probar sentido</button></div>
+      <div class="trote" data-eje="1"><b>Tilt</b>
+        <button data-g="-10">−10°</button><button data-g="-1">−1°</button><button data-g="1">+1°</button><button data-g="10">+10°</button>
+        <button data-o="5" class="secundario">fijar mín.</button><button data-o="6" class="secundario">fijar máx.</button><button data-o="10" class="secundario">probar sentido</button></div>
+      <div class="botones">
+        <button id="c-entrar">Entrar a calibración</button>
+        <button id="c-cero" class="secundario">Cero aquí (ambos ejes)</button>
+        <button id="c-guardar">Guardar y salir</button>
+        <button id="c-salir" class="secundario">Salir sin guardar</button>
+      </div>
+      <div class="botones" style="margin-top:8px">
+        <button id="c-nivel4">Arrancar en nivel 4</button>
+        <button id="c-detener" class="secundario">Detener (volver a los ajustes)</button>
+      </div>
+      <div id="calib-n4">El nivel 4 vale para un solo arranque: tras un corte de luz se vuelve al nivel de los ajustes.</div>
+    </section>
+    <section class="panel" id="p-camara">
+      <h2>Calibración de la cámara <small id="cam-resumen">-</small></h2>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Solo en nivel 0. Muestra el tablero de ajedrez
+        en distintas posiciones e inclinaciones, cubriendo también los bordes de la imagen, y captura unas 15 fotos.
+        Mientras se calcula, el video se detiene unos segundos.</div>
+      <div id="cam-estado" style="font-size:12.5px">-</div>
+      <table id="tabla-cam" style="width:100%;font-size:12.5px;border-collapse:collapse;margin:6px 0">
+        <tr><th style="text-align:left">Intrínseco</th><th style="text-align:right">Actual</th><th style="text-align:right">Nuevo</th></tr>
+        <tr><td>f<sub>u</sub> (px)</td><td id="ka0" style="text-align:right">-</td><td id="kn0" style="text-align:right">-</td></tr>
+        <tr><td>f<sub>v</sub> (px)</td><td id="ka1" style="text-align:right">-</td><td id="kn1" style="text-align:right">-</td></tr>
+        <tr><td>c<sub>u</sub> (px)</td><td id="ka2" style="text-align:right">-</td><td id="kn2" style="text-align:right">-</td></tr>
+        <tr><td>c<sub>v</sub> (px)</td><td id="ka3" style="text-align:right">-</td><td id="kn3" style="text-align:right">-</td></tr>
+      </table>
+      <div class="botones">
+        <button id="cam-capturar">Capturar foto</button>
+        <button id="cam-calcular" class="secundario">Calcular</button>
+        <button id="cam-borrar" class="secundario">Borrar fotos</button>
+        <button id="cam-guardar">Guardar intrínsecos y reiniciar</button>
+      </div>
+    </section>
+  </aside>
+</main>
+
+<script>
+"use strict";
+(function () {
+  var VENTANA_MS = 10000;   // ventana de los sparklines y de las estadisticas
+  var META_MAX = 64 * 1024, JPEG_MAX = 16 * 1024 * 1024;  // topes de la cabecera de /video
+  var REINTENTO_MS = 1000;  // reconexion del stream y del SSE
+  var N_MIN_NIVEL = { latencia: 0, percepcion: 1, estimacion: 2, control: 3, comunicacion: 3, equipo: 0 };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var lienzo = $("lienzo"), ctx = lienzo.getContext("2d");
+
+  // Lo que ven las pruebas.
+  var est = { capas_dibujadas: [], cuadros: 0, descartes_cliente: 0, edad_p50: NaN, edad_p99: NaN, anomalias: 0, nivel: 0 };
+  window.estadoDashboard = est;
+
+  var congelado = false;  // gancho de prueba: deja de pintar el stream
+  var ultimo = null;        // meta del ultimo cuadro dibujado
+  var evento = null;        // ultimo evento SSE {cuadro, salud, servidor}
+  var nivelConfirmado = 0, bloqueado = false;
+  var hist = {};            // series de 10 s: nombre -> [[t, v], ...]
+
+  function leerCss(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+  function fin(v) { return typeof v === "number" && isFinite(v); }
+  function fmt(v, d) { return fin(v) ? v.toFixed(d === undefined ? 1 : d) : "-"; }
+  function percentil(a, p) {
+    if (!a.length) return NaN;
+    var s = a.slice().sort(function (x, y) { return x - y; });
+    return s[Math.min(s.length - 1, Math.floor(p / 100 * s.length))];
+  }
+  function empujar(nombre, t, v) {
+    var h = hist[nombre] || (hist[nombre] = []);
+    h.push([t, v]);
+    var corte = t - VENTANA_MS;
+    var i = 0;
+    while (i < h.length && h[i][0] < corte) i++;
+    if (i) h.splice(0, i);
+  }
+
+  /* ---------- Reloj: desfase respecto del proceso (Cristian, menor ida y vuelta) ---------- */
+  var muestrasHora = [], desfase = 0, hayDesfase = false;
+  function medirHora() {
+    var t0 = performance.now();
+    return fetch("/hora", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
+      var t1 = performance.now();
+      muestrasHora.push({ rtt: t1 - t0, desfase: j.t_ms - (t0 + t1) / 2 });
+      if (muestrasHora.length > 5) muestrasHora.shift();
+      var mejor = muestrasHora.reduce(function (a, b) { return b.rtt < a.rtt ? b : a; });
+      desfase = mejor.desfase; hayDesfase = true;
+    }).catch(function () {});
+  }
+  function calibrar() {
+    var p = Promise.resolve();
+    for (var i = 0; i < 5; i++) p = p.then(medirHora);
+    return p;
+  }
+
+  /* ---------- Stream de video ---------- */
+  var pendiente = null;     // {bmp, meta}: lo que se dibuja en el proximo cuadro de animacion
+  var enDecodificacion = false, porDecodificar = null;
+  var llegadas = [];        // instantes de llegada, para los fps
+  var lecturaViva = false, sseViva = false;
+
+  function conexion(ok, txt) {
+    var e = $("conexion");
+    e.textContent = txt; e.className = ok ? "" : "mal";
+  }
+
+  function juntar(a, b) {
+    if (!a.length) return b;
+    var c = new Uint8Array(a.length + b.length);
+    c.set(a, 0); c.set(b, a.length);
+    return c;
+  }
+
+  function recibirTrama(meta, jpeg) {
+    est.cuadros++;
+    if (!document.hidden) llegadas.push(performance.now());  // oculta, nadie la poda
+    if (porDecodificar) est.descartes_cliente++;
+    porDecodificar = { meta: meta, jpeg: jpeg };
+    decodificar();
+  }
+  function decodificar() {
+    if (enDecodificacion || !porDecodificar) return;
+    var t = porDecodificar; porDecodificar = null; enDecodificacion = true;
+    createImageBitmap(new Blob([t.jpeg], { type: "image/jpeg" })).then(function (bmp) {
+      if (pendiente) { est.descartes_cliente++; pendiente.bmp.close(); }
+      pendiente = { bmp: bmp, meta: t.meta };
+    }).catch(function () {}).then(function () { enDecodificacion = false; decodificar(); });
+  }
+
+  function conectarVideo() {
+    var ctl = new AbortController();
+    var buf = new Uint8Array(0);
+    fetch("/video", { cache: "no-store", signal: ctl.signal }).then(function (r) {
+      if (!r.ok) throw new Error("http " + r.status);
+      lecturaViva = true;
+      var lector = r.body.getReader();
+      var dec = new TextDecoder();
+      function paso() {
+        return lector.read().then(function (x) {
+          if (x.done) throw new Error("fin");
+          buf = juntar(buf, x.value);
+          for (;;) {
+            if (buf.length < 12) break;
+            var dv = new DataView(buf.buffer, buf.byteOffset, 12);
+            if (buf[0] !== 0x54 || buf[1] !== 0x52 || buf[2] !== 0x54 || buf[3] !== 0x31) throw new Error("cabecera");
+            var nm = dv.getUint32(4, true), nj = dv.getUint32(8, true);
+            if (nm > META_MAX || nj > JPEG_MAX) throw new Error("cabecera");
+            if (buf.length < 12 + nm + nj) break;
+            var meta = null;
+            try { meta = JSON.parse(dec.decode(buf.subarray(12, 12 + nm))); } catch (e) { meta = null; }
+            var jpeg = buf.slice(12 + nm, 12 + nm + nj);
+            buf = buf.slice(12 + nm + nj);
+            if (meta) recibirTrama(meta, jpeg);
+          }
+          return paso();
+        });
+      }
+      return paso();
+    }).catch(function () {}).then(function () {
+      lecturaViva = false;
+      sistema = null;  // pudo ser un reinicio: al reconectar se vuelve a leer /sistema
+      conexion(false, "video: reconectando...");
+      setTimeout(conectarVideo, REINTENTO_MS);
+    });
+  }
+
+  /* ---------- SSE ---------- */
+  function conectarEventos() {
+    var es = new EventSource("/eventos");
+    es.onmessage = function (m) {
+      try { evento = JSON.parse(m.data); } catch (e) { return; }
+      sseViva = true;
+      alRecibirEvento();
+    };
+    es.onerror = function () {
+      es.close(); sseViva = false;
+      conexion(false, "paneles: reconectando...");
+      setTimeout(conectarEventos, REINTENTO_MS);
+    };
+  }
+
+  /* ---------- Dibujo del cuadro y del overlay ---------- */
+  var capas = [
+    { id: "s_obj", txt: "s* (referencia)", nivel: 0, color: "--ov-s", activa: true },
+    { id: "z", txt: "z y sigma", nivel: 1, color: "--ov-z", activa: true },
+    { id: "ventana", txt: "ventana del seguidor", nivel: 1, color: "--ov-z", activa: true },
+    { id: "est", txt: "s^ y puerta de S", nivel: 2, color: "--ov-est", activa: true },
+    { id: "hor", txt: "horizonte del NMPC", nivel: 3, color: "--ov-hor", activa: true },
+    { id: "fov", txt: "octagono de FOV", nivel: 3, color: "--ov-fov", activa: true }
+  ];
+  function capaActiva(id) { return capas.some(function (c) { return c.id === id && c.activa; }); }
+
+  function armarMenuCapas() {
+    var m = $("menu-capas");
+    capas.forEach(function (c) {
+      var l = document.createElement("label");
+      var cb = document.createElement("input");
+      cb.type = "checkbox"; cb.checked = c.activa;
+      cb.onchange = function () { c.activa = cb.checked; if (ultimo) redibujar(); };
+      var i = document.createElement("i"); i.style.background = "var(" + c.color + ")";
+      var s = document.createElement("span"); s.textContent = c.txt;
+      var n = document.createElement("small"); n.textContent = "nivel " + c.nivel + (c.nivel ? "+" : "");
+      l.appendChild(cb); l.appendChild(i); l.appendChild(s); l.appendChild(n);
+      m.appendChild(l);
+    });
+  }
+
+  // Trazo con halo oscuro para que se lea sobre cualquier fondo.
+  function trazo(camino, color, ancho, discontinuo) {
+    ctx.save();
+    ctx.lineJoin = "round"; ctx.lineCap = "round";
+    if (discontinuo) ctx.setLineDash([6, 4]);
+    ctx.strokeStyle = "rgba(0,0,0,.65)"; ctx.lineWidth = ancho + 2.5; ctx.stroke(camino);
+    ctx.strokeStyle = color; ctx.lineWidth = ancho; ctx.stroke(camino);
+    ctx.restore();
+  }
+  function par(a) { return a && fin(a[0]) && fin(a[1]); }
+
+  function cruz(x, y, r, color) {
+    var p = new Path2D();
+    p.moveTo(x - r, y); p.lineTo(x + r, y); p.moveTo(x, y - r); p.lineTo(x, y + r);
+    trazo(p, color, 1.5);
+  }
+  function punto(x, y, r, color) {
+    var p = new Path2D(); p.arc(x, y, r, 0, 2 * Math.PI);
+    ctx.save(); ctx.fillStyle = color; ctx.strokeStyle = "rgba(0,0,0,.65)"; ctx.lineWidth = 1.5;
+    ctx.stroke(p); ctx.fill(p); ctx.restore();
+  }
+  // Elipse {x : x'S^-1 x = g2} centrada en (cx, cy); S = [a b; b d] en filas.
+  function elipse(cx, cy, S, g2, color) {
+    var a = S[0], b = (S[1] + S[2]) / 2, d = S[3];
+    var tr = a + d, det = a * d - b * b, disc = Math.sqrt(Math.max(tr * tr / 4 - det, 0));
+    var l1 = tr / 2 + disc, l2 = tr / 2 - disc;
+    if (!(l1 > 0) || !(l2 > 0)) return false;
+    var ang = 0.5 * Math.atan2(2 * b, a - d);
+    var p = new Path2D();
+    p.ellipse(cx, cy, Math.sqrt(l1 * g2), Math.sqrt(l2 * g2), ang, 0, 2 * Math.PI);
+    trazo(p, color, 1.5);
+    return true;
+  }
+
+  // Octagono de M_FOV semiplanos n_j . (s - c) <= r - b_j, con n_j a 2*pi*j/M (como el NMPC).
+  function poligonoFov(c, r, b) {
+    var M = b.length, d = [], n = [], v = [];
+    for (var j = 0; j < M; j++) {
+      if (!fin(b[j])) return null;
+      n.push([Math.cos(2 * Math.PI * j / M), Math.sin(2 * Math.PI * j / M)]);
+      d.push(r - b[j]);
+    }
+    for (var k = 0; k < M; k++) {
+      var m = (k + 1) % M, a1 = n[k], a2 = n[m];
+      var det = a1[0] * a2[1] - a1[1] * a2[0];
+      if (Math.abs(det) < 1e-9) return null;
+      v.push([c[0] + (d[k] * a2[1] - d[m] * a1[1]) / det, c[1] + (a1[0] * d[m] - a2[0] * d[k]) / det]);
+    }
+    return v;
+  }
+  function trazarPoligono(v, color, discontinuo) {
+    var p = new Path2D();
+    v.forEach(function (q, i) { if (i) p.lineTo(q[0], q[1]); else p.moveTo(q[0], q[1]); });
+    p.closePath();
+    trazo(p, color, 1.5, discontinuo);
+  }
+
+  function overlay(m) {
+    var W = lienzo.width, H = lienzo.height;
+    ctx.save();
+    ctx.translate(0.5, 0.5);  // el origen de pixel es el centro del pixel (0, 0)
+    var nivel = m.nivel | 0;
+    var centro = par(m.centro) ? m.centro : [W / 2, H / 2];
+    var hechas = [];
+
+    if (capaActiva("s_obj")) {
+      var s = par(m.s_obj) ? m.s_obj : centro;
+      cruz(s[0], s[1], 10, leerCss("--ov-s")); hechas.push("s_obj");
+      ctx.save(); ctx.font = "12px system-ui, sans-serif"; ctx.fillStyle = leerCss("--ov-s");
+      ctx.strokeStyle = "rgba(0,0,0,.7)"; ctx.lineWidth = 3;
+      ctx.strokeText("s*", s[0] + 8, s[1] - 8); ctx.fillText("s*", s[0] + 8, s[1] - 8); ctx.restore();
+    }
+    if (capaActiva("ventana") && m.ventana && m.ventana.every(fin)) {
+      var p = new Path2D(); p.rect(m.ventana[0], m.ventana[1], m.ventana[2], m.ventana[3]);
+      trazo(p, leerCss("--ov-z"), 1.5, true); hechas.push("ventana");
+    }
+    if (capaActiva("z") && par(m.z)) {
+      cruz(m.z[0], m.z[1], 6, leerCss("--ov-z")); hechas.push("z");
+      if (fin(m.sigma) && m.sigma > 0) {
+        var c = new Path2D(); c.arc(m.z[0], m.z[1], m.sigma, 0, 2 * Math.PI);
+        trazo(c, leerCss("--ov-z"), 1.2);
+      }
+    }
+    if (capaActiva("est") && par(m.s_hat)) {
+      // La puerta usa el umbral chi^2 de la puerta (chi2_puerta), no nis_ref; sin valor no se dibuja.
+      if (m.S && m.S.every(fin) && fin(m.chi2_puerta) && elipse(m.s_hat[0], m.s_hat[1], m.S, m.chi2_puerta, leerCss("--ov-est")))
+        hechas.push("puerta");
+      punto(m.s_hat[0], m.s_hat[1], 4, leerCss("--ov-est")); hechas.push("est");
+    }
+    if (capaActiva("fov") && fin(m.fov_r) && m.fov_b && m.fov_b.length) {
+      var nominal = poligonoFov(centro, m.fov_r, m.fov_b.map(function () { return 0; }));
+      var efectivo = poligonoFov(centro, m.fov_r, m.fov_b);
+      if (nominal) trazarPoligono(nominal, leerCss("--ov-fov"), true);
+      if (efectivo) { trazarPoligono(efectivo, leerCss("--ov-fov"), false); hechas.push("fov"); }
+    }
+    if (capaActiva("hor") && m.horizonte && m.horizonte.length) {
+      var h = new Path2D(), dibujado = false;
+      m.horizonte.forEach(function (q) {
+        if (!par(q)) return;
+        if (dibujado) h.lineTo(q[0], q[1]); else h.moveTo(q[0], q[1]);
+        dibujado = true;
+      });
+      if (dibujado) {
+        trazo(h, leerCss("--ov-hor"), 1.5);
+        m.horizonte.forEach(function (q) { if (par(q)) punto(q[0], q[1], 2.5, leerCss("--ov-hor")); });
+        hechas.push("hor");
+      }
+    }
+    if (arrastre) {
+      var r = new Path2D(); r.rect(arrastre.x, arrastre.y, arrastre.w, arrastre.h);
+      trazo(r, leerCss("--ov-est"), 2, true);
+    }
+    ctx.restore();
+    est.capas_dibujadas = hechas;
+  }
+
+  /* ---------- Perfil general: seleccion del blanco arrastrando sobre el video ---------- */
+  var arrastre = null, inicioArrastre = null;
+  function perfilGeneral() { return evento && evento.cuadro && evento.cuadro.perfil === "general"; }
+  // Pixel del cuadro bajo el puntero (el lienzo se escala con CSS).
+  function pixel(e) {
+    var b = lienzo.getBoundingClientRect();
+    return [(e.clientX - b.left) * lienzo.width / b.width, (e.clientY - b.top) * lienzo.height / b.height];
+  }
+  lienzo.addEventListener("pointerdown", function (e) {
+    if (!perfilGeneral()) return;
+    inicioArrastre = pixel(e); arrastre = { x: inicioArrastre[0], y: inicioArrastre[1], w: 0, h: 0 };
+    lienzo.setPointerCapture(e.pointerId); e.preventDefault();
+  });
+  lienzo.addEventListener("pointermove", function (e) {
+    if (!inicioArrastre) return;
+    var q = pixel(e), a = inicioArrastre;
+    arrastre = { x: Math.min(a[0], q[0]), y: Math.min(a[1], q[1]), w: Math.abs(q[0] - a[0]), h: Math.abs(q[1] - a[1]) };
+    if (ultimo) redibujar();
+  });
+  lienzo.addEventListener("pointerup", function () {
+    if (!inicioArrastre) return;
+    var r = arrastre; inicioArrastre = null; arrastre = null;
+    if (r.w < 8 || r.h < 8) return;  // un clic suelto no selecciona
+    fetch("/seleccion", { method: "POST", cache: "no-store",
+      body: [r.x, r.y, r.w, r.h].map(function (v) { return Math.max(0, Math.round(v)); }).join(" ") }).catch(function () {});
+  });
+
+  // Gancho de prueba: congela el stream y dibuja un meta sintetico sobre el cuadro actual.
+  window.dibujarMetaPrueba = function (m) {
+    congelado = true; ultimo = m;
+    if (bmpActual) ctx.drawImage(bmpActual, 0, 0);
+    else { ctx.fillStyle = "#808080"; ctx.fillRect(0, 0, lienzo.width, lienzo.height); }
+    overlay(m); leyenda(m);
+  };
+
+  var bmpActual = null;
+  function redibujar() {
+    if (!bmpActual || !ultimo) return;
+    ctx.drawImage(bmpActual, 0, 0);
+    overlay(ultimo);
+  }
+
+  function dibujar(p) {
+    if (lienzo.width !== p.bmp.width || lienzo.height !== p.bmp.height) {
+      lienzo.width = p.bmp.width; lienzo.height = p.bmp.height;
+      $("marco").style.aspectRatio = p.bmp.width + " / " + p.bmp.height;
+    }
+    if (bmpActual) bmpActual.close();
+    bmpActual = p.bmp; ultimo = p.meta;
+    ctx.drawImage(bmpActual, 0, 0);
+    overlay(ultimo);
+    $("sin-video").hidden = true;
+    return performance.now();
+  }
+
+  var edades = [];  // [t, edad] dentro de la ventana
+  function bucleAnimacion() {
+    if (pendiente && congelado) {
+      pendiente.bmp.close(); pendiente = null;
+    } else if (pendiente && !document.hidden) {
+      var p = pendiente; pendiente = null;
+      var t = dibujar(p);
+      if (hayDesfase && fin(p.meta.t_captura_ms)) {
+        var edad = t + desfase - p.meta.t_captura_ms;
+        if (edad < 0) est.anomalias++;
+        else { edades.push([t, edad]); empujar("edad", t, edad); actual = edad; }
+      }
+      est.nivel = p.meta.nivel | 0;
+      nivelConfirmado = est.nivel; bloqueado = !!p.meta.bloqueado;
+    } else if (pendiente) {
+      pendiente.bmp.close(); pendiente = null;
+    }
+    requestAnimationFrame(bucleAnimacion);
+  }
+  var actual = NaN;
+
+  /* ---------- Estadisticas (cada 250 ms) ---------- */
+  function estadisticas() {
+    if (document.hidden) return;
+    var t = performance.now(), corte = t - VENTANA_MS;
+    while (edades.length && edades[0][0] < corte) edades.shift();
+    var v = edades.map(function (x) { return x[1]; });
+    est.edad_p50 = percentil(v, 50); est.edad_p99 = percentil(v, 99);
+    while (llegadas.length && llegadas[0] < t - 1000) llegadas.shift();
+    $("edad-actual").textContent = fmt(actual, 0);
+    $("edad-p99").textContent = fmt(est.edad_p99, 0);
+    $("b-fps").textContent = String(llegadas.length);
+    var sv = evento && evento.servidor;
+    var servDesc = sv ? sv.cuadros_descartados + sv.descartes_publicador : 0;
+    $("b-desc").textContent = servDesc + est.descartes_cliente;
+    empujar("fps", t, llegadas.length);
+    pintarPaneles();
+  }
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) return;
+    edades = []; hist.edad = []; actual = NaN; llegadas = [];
+    est.edad_p50 = est.edad_p99 = NaN;
+  });
+
+  /* ---------- Paneles ---------- */
+  // Cada panel: titulo, nivel minimo, filas (clave, funcion que da el texto) y sparkline.
+  var cola = function (s) { return s && s.cola_max_bytes >= 0 ? fmt(s.cola_max_bytes / 1024, 0) + " kB" : "-"; };
+  var tx = function (m, k) { return m && m[k] !== undefined && m[k] !== null ? String(m[k]) : "-"; };
+  var PANELES = [
+    { id: "latencia", titulo: "Latencia", filas: [
+        ["edad p50 / p99", function () { return fmt(est.edad_p50, 0) + " / " + fmt(est.edad_p99, 0) + " ms"; }],
+        ["cola de envio", function (m, e) { return cola(e.servidor); }],
+        ["fps recibidos", function () { return String(llegadas.length); }],
+        ["descartes (pagina / servidor)", function (m, e) {
+            var s = e.servidor; return est.descartes_cliente + " / " + (s ? s.cuadros_descartados + s.descartes_publicador : "-"); }],
+        ["copia en el lazo", function (m) { return m && fin(m.us_publicar) ? fmt(m.us_publicar, 1) + " us" : "-"; }]],
+      series: [{ h: "edad", c: "--s1" }], rot: [["--s1", "edad del cuadro (ms)"]] },
+    { id: "percepcion", titulo: "Percepcion", filas: [
+        ["estado", function (m) { return tx(m, "estado_perfil"); }],
+        ["sigma", function (m) { return fin(m.sigma) ? fmt(m.sigma, 2) + " px" : "-"; }],
+        ["confianza", function (m) { return fmt(m.confianza, 2); }],
+        ["costo", function (m) { return fin(m.ms_percepcion) ? fmt(m.ms_percepcion, 2) + " ms" : "-"; }]],
+      series: [{ h: "sigma", c: "--s2" }], rot: [["--s2", "sigma (px)"]] },
+    { id: "estimacion", titulo: "Estimacion", filas: [
+        ["medicion aceptada", function (m) { return m.aceptada ? "si" : "no"; }],
+        ["NIS", function (m) { return fmt(m.nis, 2) + (m.dim_nis ? " (" + m.dim_nis + " gl)" : ""); }],
+        ["mu del IMM", function (m) { return m.mu && m.mu.every(fin) ? fmt(m.mu[0], 2) + " / " + fmt(m.mu[1], 2) : "-"; }],
+        ["rho", function (m) { return fmt(m.rho, 3); }]],
+      series: [{ h: "nis", c: "--s1", puntos: true }, { h: "nis_media", c: "--s2" },
+               { h: "nis_ref", c: "--muted", ref: true }],
+      rot: [["--s1", "NIS (aceptadas)"], ["--s2", "media movil"], ["--muted", "nis_ref, chi^2 truncada"]] },
+    { id: "control", titulo: "Control", filas: [
+        ["factibilidad (QP)", function (m) { return tx(m, "estado_qp") + (m.qp_iter ? ", " + m.qp_iter + " it" : ""); }],
+        ["holgura de FOV", function (m) { return fmt(m.holgura, 2); }],
+        ["RTI / Delta_fb", function (m) { return fmt(m.ms_rti, 2) + " / " + fmt(m.delta_fb_ms, 2) + " ms"; }],
+        ["t_a - t_s", function (m) { return fin(m.ta_menos_ts_ms) ? fmt(m.ta_menos_ts_ms, 2) + " ms" : "-"; }]],
+      series: [{ h: "ms_rti", c: "--s1" }, { h: "delta_fb", c: "--muted", ref: true }],
+      rot: [["--s1", "ms del RTI"], ["--muted", "Delta_fb"]] },
+    { id: "comunicacion", titulo: "Comunicacion", filas: [
+        ["bytes del plan", function (m) { return tx(m, "bytes_plan"); }],
+        ["limitador", function (m) { return n4(m, function () { return m.limitador ? "activo" : "no"; }); }],
+        ["frenando", function (m) { return n4(m, function () { return m.frenando ? "si" : "no"; }); }],
+        ["edad del buffer", function (m) { return n4(m, function () { return fmt(m.edad_buffer_ms, 1) + " ms"; }); }],
+        ["p^_GE", function (m) { return n4(m, function () { return fmt(m.ge_p, 3); }); }],
+        ["margen", function (m) { return n4(m, function () { return fmt(m.margen, 2); }); }]],
+      series: [{ h: "bytes_plan", c: "--s3" }], rot: [["--s3", "bytes del plan"]] },
+    { id: "equipo", titulo: "Equipo", equipo: true }
+  ];
+  function n4(m, f) { return (m.nivel | 0) >= 4 ? f() : "solo en nivel 4"; }
+
+  function armarPaneles() {
+    var cont = $("paneles");
+    PANELES.forEach(function (p) {
+      var sec = document.createElement("section");
+      sec.className = "panel"; sec.id = "p-" + p.id;
+      var h = document.createElement("h2"); h.textContent = p.titulo; sec.appendChild(h);
+      var off = document.createElement("div"); off.className = "apagado"; sec.appendChild(off);
+      var cuerpo = document.createElement("div"); cuerpo.className = "cuerpo"; sec.appendChild(cuerpo);
+      if (p.equipo) {
+        cuerpo.innerHTML = '<div class="barras" id="eq-cpu"></div><dl class="kv"></dl>';
+      } else {
+        var dl = document.createElement("dl"); dl.className = "kv";
+        p.filas.forEach(function (f) {
+          var dt = document.createElement("dt"); dt.textContent = f[0];
+          var dd = document.createElement("dd"); dd.textContent = "-";
+          f.push(dd); dl.appendChild(dt); dl.appendChild(dd);
+        });
+        cuerpo.appendChild(dl);
+        var cv = document.createElement("canvas"); cv.className = "spark"; p.canvas = cv; cuerpo.appendChild(cv);
+        var rot = document.createElement("div"); rot.className = "rotulo";
+        p.rot.forEach(function (r) {
+          var s = document.createElement("span");
+          s.innerHTML = '<i style="background:var(' + r[0] + ')"></i>'; s.appendChild(document.createTextNode(r[1]));
+          rot.appendChild(s);
+        });
+        cuerpo.appendChild(rot);
+      }
+      p.sec = sec; p.off = off; p.cuerpo = cuerpo;
+      cont.appendChild(sec);
+    });
+  }
+
+  function dibujarSpark(cv, series) {
+    var dpr = window.devicePixelRatio || 1;
+    var w = cv.clientWidth, h = cv.clientHeight;
+    if (!w || !h) return;
+    if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
+      cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    }
+    var g = cv.getContext("2d");
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, h);
+    var t1 = performance.now(), t0 = t1 - VENTANA_MS;
+    var lo = Infinity, hi = -Infinity;
+    series.forEach(function (s) {
+      (hist[s.h] || []).forEach(function (q) { if (fin(q[1])) { lo = Math.min(lo, q[1]); hi = Math.max(hi, q[1]); } });
+    });
+    g.strokeStyle = leerCss("--grid"); g.lineWidth = 1;
+    g.beginPath(); g.moveTo(0, h - 0.5); g.lineTo(w, h - 0.5); g.stroke();
+    if (!(lo <= hi)) return;
+    if (hi - lo < 1e-9) { lo -= 0.5; hi += 0.5; }
+    var pad = (hi - lo) * 0.12; lo -= pad; hi += pad;
+    var X = function (t) { return (t - t0) / VENTANA_MS * w; };
+    var Y = function (v) { return h - 3 - (v - lo) / (hi - lo) * (h - 8); };
+    series.forEach(function (s) {
+      var d = hist[s.h] || [];
+      g.strokeStyle = leerCss(s.c); g.fillStyle = g.strokeStyle; g.lineWidth = s.ref ? 1 : 1.6;
+      g.setLineDash(s.ref ? [4, 3] : []);
+      g.lineJoin = "round"; g.lineCap = "round";
+      if (s.puntos) {
+        d.forEach(function (q) { if (fin(q[1])) { g.beginPath(); g.arc(X(q[0]), Y(q[1]), 1.8, 0, 6.283); g.fill(); } });
+        return;
+      }
+      g.beginPath();
+      var pen = false;
+      d.forEach(function (q) {
+        if (!fin(q[1])) { pen = false; return; }
+        if (pen) g.lineTo(X(q[0]), Y(q[1])); else g.moveTo(X(q[0]), Y(q[1]));
+        pen = true;
+      });
+      g.stroke();
+      if (!s.ref && d.length && fin(d[d.length - 1][1])) {
+        g.beginPath(); g.arc(X(d[d.length - 1][0]), Y(d[d.length - 1][1]), 2.5, 0, 6.283); g.fill();
+      }
+    });
+    g.setLineDash([]);
+  }
+
+  function pintarEquipo(p, e) {
+    var s = e.salud, cpu = $("eq-cpu");
+    if (!s) return;
+    var html = "", n = Math.max(1, s.n_nucleos | 0);
+    for (var i = 0; i < n && s.cpu; i++) {
+      var v = s.cpu[i];
+      html += '<div class="barra-cpu"><span>' + (n === 1 ? "CPU" : "n" + i) + '</span><div><i style="width:' +
+        (fin(v) ? Math.min(100, v) : 0) + '%"></i></div><span>' + fmt(v, 0) + ' %</span></div>';
+    }
+    cpu.innerHTML = html;
+    var dl = p.cuerpo.querySelector("dl");
+    dl.innerHTML = "";
+    var filas = [
+      ["memoria", fin(s.mem_usada_mb) ? fmt(s.mem_usada_mb, 0) + " / " + fmt(s.mem_total_mb, 0) + " MB" : "-"],
+      ["temperatura", fin(s.temp_c) ? fmt(s.temp_c, 1) + "  gradosC" : "n/d"],
+      ["throttling", s.throttled === null || s.throttled === undefined ? "n/d" : (s.throttled ? "si (0x" + s.throttled.toString(16) + ")" : "no")]
+    ];
+    filas.forEach(function (f) {
+      var dt = document.createElement("dt"), dd = document.createElement("dd");
+      dt.textContent = f[0]; dd.textContent = f[1]; dl.appendChild(dt); dl.appendChild(dd);
+    });
+  }
+
+  function pintarPaneles() {
+    var e = evento || {}, m = e.cuadro || null;
+    var nivel = m ? m.nivel | 0 : nivelConfirmado;
+    PANELES.forEach(function (p) {
+      var minimo = N_MIN_NIVEL[p.id];
+      var activo = nivel >= minimo && (m || minimo === 0);
+      p.sec.classList.toggle("inactivo", !activo);
+      p.off.textContent = "inactivo en nivel " + nivel;
+      if (!activo) return;
+      if (p.equipo) { pintarEquipo(p, e); return; }
+      p.filas.forEach(function (f) { f[2].textContent = f[1](m || {}, e); });
+      dibujarSpark(p.canvas, p.series);
+    });
+  }
+
+  var kUltimoNis = -1, ventanaNis = [];
+  function alRecibirEvento() {
+    var m = evento.cuadro, t = performance.now();
+    if (!m) return;
+    var activo = function (n) { return (m.nivel | 0) >= n; };
+    if (activo(1)) empujar("sigma", t, fin(m.sigma) ? m.sigma : NaN);
+    if (activo(2)) {
+      if (m.aceptada && fin(m.nis) && m.k !== kUltimoNis) {
+        kUltimoNis = m.k;
+        ventanaNis.push(m.nis); if (ventanaNis.length > 10) ventanaNis.shift();
+        var media = ventanaNis.reduce(function (a, b) { return a + b; }, 0) / ventanaNis.length;
+        empujar("nis", t, m.nis); empujar("nis_media", t, media);
+      }
+      empujar("nis_ref", t, fin(m.nis_ref) ? m.nis_ref : NaN);
+    } else { ventanaNis = []; kUltimoNis = -1; hist.nis = []; hist.nis_media = []; hist.nis_ref = []; }
+    if (activo(3)) {
+      empujar("ms_rti", t, fin(m.ms_rti) ? m.ms_rti : NaN);
+      empujar("delta_fb", t, fin(m.delta_fb_ms) ? m.delta_fb_ms : NaN);
+      empujar("bytes_plan", t, fin(m.bytes_plan) ? m.bytes_plan : NaN);
+    }
+    // La barra
+    $("b-fuente").textContent = m.fuente || "-";
+    $("b-perfil").textContent = m.perfil || "-";
+    var sel = $("nivel");
+    if (document.activeElement !== sel && !enviando) sel.value = String(Math.min(3, m.nivel | 0));
+    $("candado").hidden = !m.bloqueado;
+    sel.hidden = !!m.bloqueado;
+    $("candado-n").textContent = String(m.nivel | 0);
+    leyenda(m);
+  }
+
+  function leyenda(m) {
+    var nivel = m.nivel | 0, html = "";
+    capas.forEach(function (c) {
+      if (c.nivel <= nivel && c.activa)
+        html += '<span><i style="background:var(' + c.color + ')"></i>' + c.txt + "</span>";
+    });
+    if (nivel >= 3) html += '<span id="nota-rumbo">aprox. rumbo ~ pixel</span>';
+    if (m.perfil === "general" && nivel >= 1)
+      html += '<span id="nota-rumbo">' + (m.estado_perfil === "SIN_SELECCION" ? "arrastra sobre el video para elegir el blanco" : "arrastra otro recuadro para cambiar de blanco") + '</span>';
+    if ($("leyenda").dataset.h !== html) { $("leyenda").innerHTML = html; $("leyenda").dataset.h = html; }
+  }
+
+  /* ---------- Selector de nivel ---------- */
+  var enviando = false;
+  $("nivel").addEventListener("change", function () {
+    var sel = $("nivel"), n = sel.value;
+    enviando = true;
+    fetch("/nivel", { method: "POST", body: n, cache: "no-store" }).then(function (r) {
+      if (!r.ok) sel.value = String(nivelConfirmado);
+    }).catch(function () { sel.value = String(nivelConfirmado); })
+      .then(function () { enviando = false; });
+  });
+
+  /* ---------- Sistema: chequeo, configuracion y reinicio ---------- */
+  var TEL = { DRIVERS_OFF: 0x20, FALLA_ENCODER: 0x40, FALLA_INA: 0x80 };  // = mensajes.h
+  var sistema = null;  // GET /sistema; null hasta cargarlo y tras pedir un reinicio
+  function item(estado, txt, det) {
+    var li = document.createElement("li"); li.className = estado;
+    var s = document.createElement("span"); s.textContent = txt; li.appendChild(s);
+    if (det) { var d = document.createElement("small"); d.textContent = det; li.appendChild(d); }
+    return li;
+  }
+  function itemsEsp32(b) {
+    return [
+      b & TEL.DRIVERS_OFF ? item("mal", "Drivers", "deshabilitados (sobrecorriente o fuera de límites): reiniciar la ESP32") : item("ok", "Drivers", "habilitados"),
+      b & TEL.FALLA_ENCODER ? item("mal", "Encoders (AS5600)", "alguno no responde") : item("ok", "Encoders (AS5600)", "responden"),
+      b & TEL.FALLA_INA ? item("aviso", "Corriente (INA219)", "alguno no responde: sin protección") : item("ok", "Corriente (INA219)", "responden")
+    ];
+  }
+  // Las banderas de la ESP32 son las del sondeo al arrancar o, en nivel 4, las del ultimo cuadro.
+  function pintarChequeo() {
+    var ul = $("chequeo"); ul.innerHTML = "";
+    var e = evento || {}, s = e.salud, m = e.cuadro;
+    var nomCam = sistema && sistema.fuente === "usb" ? "Cámara USB" : "Cámara";
+    ul.appendChild(lecturaViva && llegadas.length ? item("ok", nomCam, llegadas.length + " fps") : item("mal", nomCam, "sin cuadros"));
+    if (s && fin(s.temp_c)) ul.appendChild(item(s.temp_c > 80 ? "mal" : s.temp_c > 70 ? "aviso" : "ok", "Temperatura Pi", fmt(s.temp_c, 1) + " °C"));
+    if (s && s.throttled !== null && s.throttled !== undefined)
+      ul.appendChild(s.throttled ? item("aviso", "Alimentación Pi", "throttling 0x" + s.throttled.toString(16)) : item("ok", "Alimentación Pi", "sin throttling"));
+    if (!sistema) { ul.appendChild(item("", "Configuración", "cargando...")); $("sis-resumen").textContent = "-"; return; }
+    var x = sistema.esp32, hayTel = x.telemetrias > 0, b = x.banderas;
+    var enVivo = m && (m.nivel | 0) >= 4 && fin(m.banderas_esp32);
+    if (enVivo) { hayTel = true; b = m.banderas_esp32; }
+    if (!x.abierto && !enVivo) ul.appendChild(item("mal", "ESP32", "la UART " + sistema.puerto + " no abre"));
+    else if (!hayTel) ul.appendChild(item("mal", "ESP32", "no responde: desconectada, apagada o en modo calibración"));
+    else ul.appendChild(item("ok", "ESP32", enVivo ? "telemetría en vivo" : x.telemetrias + " telemetrías al arrancar" +
+      (x.q && fin(x.q[0]) ? ", q = " + fmt(x.q[0], 3) + ", " + fmt(x.q[1], 3) + " rad" : "")));
+    if (hayTel) itemsEsp32(b).forEach(function (li) { ul.appendChild(li); });
+    ul.appendChild(item("", "Perfil", sistema.perfil + ", EKF " + sistema.perfil_ekf + ", arranque en nivel " + sistema.nivel));
+    var malos = ul.querySelectorAll("li.mal").length, avisos = ul.querySelectorAll("li.aviso").length;
+    $("sis-resumen").textContent = malos ? malos + " falla(s)" : avisos ? avisos + " aviso(s)" : "todo ok";
+  }
+  function armarAjustes() {
+    var f = $("form-ajustes"); f.innerHTML = "";
+    var nota = { "ekf.perfil": "vacío = " + sistema.perfil_ekf, "vivo.nivel": "0 a 3" };
+    Object.keys(sistema.ajustes).forEach(function (k) {
+      var l = document.createElement("label"); l.textContent = k; l.htmlFor = "aj-" + k;
+      var i = document.createElement("input"); i.id = "aj-" + k; i.dataset.clave = k;
+      i.value = sistema.ajustes[k]; i.placeholder = nota[k] || "por defecto";
+      f.appendChild(l); f.appendChild(i);
+    });
+  }
+  var cargandoSistema = false;
+  function cargarSistema() {
+    if (cargandoSistema) return;
+    cargandoSistema = true;
+    fetch("/sistema", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
+      sistema = j; armarAjustes(); pintarChequeo();
+    }).catch(function () {}).then(function () { cargandoSistema = false; });
+  }
+  function accion(url, cuerpo, txt) {
+    $("sis-msg").textContent = txt;
+    fetch(url, { method: "POST", body: cuerpo, cache: "no-store" }).then(function (r) {
+      return r.text().then(function (t) { if (!r.ok) throw new Error(t.trim() || "http " + r.status); });
+    }).then(function () { $("sis-msg").textContent = txt + " Reconectando..."; })
+      .catch(function (e) { $("sis-msg").textContent = "Error: " + e.message; });
+  }
+  // Se guardan todos los campos no vacios: ajustes.ini se reescribe entero.
+  $("b-guardar").onclick = function () {
+    var lineas = [];
+    document.querySelectorAll("#form-ajustes input").forEach(function (i) {
+      var v = i.value.trim(); if (v) lineas.push(i.dataset.clave + "=" + v);
+    });
+    if (confirm("Se guardan los ajustes y se reinicia el programa. ¿Seguir?"))
+      accion("/ajustes", lineas.join("\n") + "\n", "Ajustes guardados; reiniciando el programa.");
+  };
+  $("b-reiniciar").onclick = function () {
+    if (confirm("¿Reiniciar el programa?")) accion("/reiniciar", "programa", "Reiniciando el programa.");
+  };
+  $("b-reiniciar-pi").onclick = function () {
+    if (confirm("¿Reiniciar la Raspberry Pi entera? Tarda cerca de un minuto.")) accion("/reiniciar", "pi", "Reiniciando la Pi.");
+  };
+
+  /* ---------- Calibracion de los ejes y arranque en nivel 4 ---------- */
+  // Ordenes = CMD_* de mensajes.h; banderas = CALIB_* y TEL_*.
+  var CMD = { ENTRAR: 1, SALIR: 2, MOVER: 3, CERO: 4, MIN: 5, MAX: 6, GUARDAR: 7, PARAR: 8, REINICIAR: 9, SENTIDO: 10 };
+  var CALIB = { CALIBRANDO: 1, GUARDADA: 2 };
+  function grados(v) { return fin(v) ? (v * 180 / Math.PI).toFixed(1) + "°" : "-"; }
+  function comandoEsp32(orden, eje, valor) {
+    fetch("/calibracion", { method: "POST", cache: "no-store", body: orden + " " + (eje | 0) + " " + (valor || 0) })
+      .catch(function () {});
+  }
+  // Mismas condiciones que exige el lazo para aceptar el nivel 4 (correr_vivo.cpp).
+  function motivoNivel4(m) {
+    if (!m || !m.esp_ok) return "sin telemetría reciente de la ESP32";
+    if (m.banderas_esp32 & (TEL.DRIVERS_OFF | TEL.FALLA_ENCODER | TEL.FALLA_INA)) return "falla de drivers o sensores";
+    if (!(m.esp_calib >= 0) || !(m.esp_calib & CALIB.GUARDADA)) return "sin calibración guardada";
+    if (m.esp_calib & CALIB.CALIBRANDO) return "la ESP32 está en modo calibración";
+    return null;
+  }
+  function pintarCalibracion() {
+    var m = (evento && evento.cuadro) || null, n4 = m && (m.nivel | 0) >= 4;
+    var calibrando = m && m.esp_calib >= 0 && (m.esp_calib & CALIB.CALIBRANDO);
+    for (var j = 0; j < 2; j++) {
+      $("cq" + j).textContent = m && m.esp_q ? grados(m.esp_q[j]) : "-";
+      $("cmin" + j).textContent = m && m.esp_qmin ? grados(m.esp_qmin[j]) : "-";
+      $("cmax" + j).textContent = m && m.esp_qmax ? grados(m.esp_qmax[j]) : "-";
+    }
+    var txt;
+    if (!m) txt = "sin datos";
+    else if (n4) txt = "nivel 4: la calibración no está disponible; para calibrar, detener";
+    else if (!m.esp_ok) txt = "la ESP32 no responde";
+    else if (!(m.esp_calib >= 0)) txt = "esperando el estado de la ESP32 (firmware sin calibración por UART?)";
+    else txt = (calibrando ? "en modo calibración" : "operando") + ", " +
+               (m.esp_calib & CALIB.GUARDADA ? "calibración guardada" : "sin calibración guardada");
+    $("calib-estado").textContent = txt;
+    var motivo = motivoNivel4(m);
+    $("calib-resumen").textContent = n4 ? "nivel 4 activo" : motivo ? "nivel 4 no disponible" : "listo para nivel 4";
+    var puede = m && !n4 && m.esp_ok && m.esp_calib >= 0;
+    document.querySelectorAll("#p-calib .trote button").forEach(function (b) { b.disabled = !(puede && calibrando); });
+    $("c-entrar").disabled = !(puede && !calibrando);
+    $("c-cero").disabled = $("c-guardar").disabled = $("c-salir").disabled = !(puede && calibrando);
+    $("c-nivel4").disabled = !!motivo || n4;
+    $("c-nivel4").title = motivo || "";
+    $("c-detener").disabled = !n4;
+    $("calib-n4").textContent = n4 ? "Detener reinicia el programa en el nivel de los ajustes; la ESP32 frena sola al quedarse sin plan." :
+      motivo ? "Nivel 4 no disponible: " + motivo + "." : "El nivel 4 vale para un solo arranque: tras un corte de luz se vuelve al nivel de los ajustes.";
+  }
+  document.querySelectorAll("#p-calib .trote").forEach(function (fila) {
+    var eje = +fila.dataset.eje;
+    fila.querySelectorAll("button").forEach(function (b) {
+      b.onclick = function () {
+        if (b.dataset.g) comandoEsp32(CMD.MOVER, eje, +b.dataset.g);
+        else comandoEsp32(+b.dataset.o, eje, 0);
+      };
+    });
+  });
+  $("c-entrar").onclick = function () { comandoEsp32(CMD.ENTRAR, 0, 0); };
+  $("c-cero").onclick = function () { if (confirm("¿Fijar el cero de ambos ejes en la pose actual?")) comandoEsp32(CMD.CERO, 0, 0); };
+  $("c-guardar").onclick = function () { comandoEsp32(CMD.GUARDAR, 0, 0); };
+  $("c-salir").onclick = function () { comandoEsp32(CMD.SALIR, 0, 0); };
+  $("c-nivel4").onclick = function () {
+    if (confirm("Se reinicia el programa en el NIVEL 4: la torreta se moverá sola. ¿Seguir?"))
+      accion("/reiniciar", "nivel4", "Reiniciando en nivel 4.");
+  };
+  // Parada de emergencia: sin confirmacion. La ESP32 deshabilita los drivers apenas la recibe;
+  // para volver a operar hay que reiniciarla.
+  $("parada").onclick = function () {
+    comandoEsp32(CMD.PARAR, 0, 0);
+    $("sis-msg").textContent = "Parada enviada: drivers deshabilitados. Para volver a operar, reiniciar la ESP32.";
+  };
+  $("b-reiniciar-esp").onclick = function () {
+    if (confirm("¿Reiniciar la ESP32? Rearma los drivers; tarda unos segundos.")) comandoEsp32(CMD.REINICIAR, 0, 0);
+  };
+  $("b-apagar-pi").onclick = function () {
+    if (confirm("¿Apagar la Raspberry Pi? Para volver a encenderla hay que cortar y devolver la alimentación."))
+      accion("/reiniciar", "apagar", "Apagando la Pi: espera a que se apague el LED verde antes de cortar la energía.");
+  };
+  $("c-detener").onclick = function () { accion("/reiniciar", "programa", "Deteniendo el nivel 4."); };
+
+  /* ---------- Prueba de sentido, sensores y calibracion de la camara ---------- */
+  var SENTIDO = ["sin probar", "ok", "el encoder no acompaña", "sin espacio en los límites", "sin encoder"];
+  var CALIB_SENSORES = [[4, "AS5600 pan"], [8, "AS5600 tilt"], [16, "INA219 pan"], [32, "INA219 tilt"]];
+  function pintarSentido(m) {
+    for (var j = 0; j < 2; j++) {
+      var cod = m ? m["esp_sentido" + j] : null, dq = m && m.esp_dq ? m.esp_dq[j] : null;
+      $("csen" + j).textContent = cod === null || cod === undefined ? "-" :
+        SENTIDO[cod] + (cod === 1 || cod === 2 ? " (" + fmt(dq, 1) + "°)" : "");
+    }
+    $("calib-sensores").textContent = m && m.esp_calib >= 0 ? "Al arrancar: " + CALIB_SENSORES.map(function (x) {
+      return x[1] + (m.esp_calib & x[0] ? " ok" : " NO RESPONDE"); }).join(", ") : "-";
+  }
+  // Intrinsecos de la camara en uso: los de la USB van en [usb].
+  function clavesCamara() {
+    var s = sistema && sistema.fuente === "usb" ? "usb.camara." : "camara.";
+    return ["fu", "fv", "cu", "cv"].map(function (k) { return s + k; });
+  }
+  function pintarCamara() {
+    var m = (evento && evento.cuadro) || null, n0 = m && (m.nivel | 0) === 0;
+    var actual = sistema && sistema.ajustes ? clavesCamara().map(function (k) {
+      return parseFloat(sistema.ajustes[k]); }) : [];
+    for (var i = 0; i < 4; i++) {
+      $("ka" + i).textContent = fin(actual[i]) ? actual[i].toFixed(1) : "-";
+      $("kn" + i).textContent = m && m.cam_ok && m.cam_K ? fmt(m.cam_K[i], 1) : "-";
+    }
+    var fotos = m ? m.cam_fotos | 0 : 0;
+    var ult = !m || m.cam_ultima < 0 ? "" : m.cam_ultima ? " La última tenía el tablero." : " La última NO tenía el tablero completo.";
+    $("cam-estado").textContent = !m ? "sin datos" : !n0 ? "Disponible solo en el nivel 0." :
+      fotos + " foto(s) válida(s)." + ult + (m.cam_ok ? " RMS " + fmt(m.cam_rms, 2) + " px, k1 " + fmt(m.cam_k[0], 3) +
+      ", k2 " + fmt(m.cam_k[1], 3) + "." : "");
+    $("cam-resumen").textContent = m && m.cam_ok ? "RMS " + fmt(m.cam_rms, 2) + " px" : fotos + " fotos";
+    $("cam-capturar").disabled = $("cam-borrar").disabled = !n0;
+    $("cam-calcular").disabled = !(n0 && fotos >= 3);
+    $("cam-guardar").disabled = !(m && m.cam_ok && sistema);
+  }
+  function camara(orden) { fetch("/camara", { method: "POST", cache: "no-store", body: orden }).catch(function () {}); }
+  $("cam-capturar").onclick = function () { camara("capturar"); };
+  $("cam-calcular").onclick = function () { camara("calcular"); $("cam-estado").textContent = "Calculando..."; };
+  $("cam-borrar").onclick = function () { if (confirm("¿Borrar las fotos capturadas?")) camara("borrar"); };
+  // Se guarda con el formulario de ajustes: se escriben los cuatro intrinsecos y se reinicia.
+  $("cam-guardar").onclick = function () {
+    var m = evento && evento.cuadro;
+    if (!m || !m.cam_ok) return;
+    clavesCamara().forEach(function (k, i) {
+      var inp = $("aj-" + k); if (inp) inp.value = m.cam_K[i].toFixed(2);
+    });
+    $("b-guardar").onclick();
+  };
+
+  /* ---------- Arranque ---------- */
+  armarMenuCapas();
+  armarPaneles();
+  pintarPaneles();
+  calibrar().then(function () { setInterval(medirHora, 10000); });
+  conectarVideo();
+  conectarEventos();
+  setInterval(estadisticas, 250);
+  setInterval(function () {
+    if (lecturaViva && sseViva) {
+      conexion(true, "conectado");
+      if (!sistema) cargarSistema();
+    }
+    pintarChequeo();
+    pintarCalibracion();
+    pintarSentido((evento && evento.cuadro) || null);
+    pintarCamara();
+  }, 500);
+  requestAnimationFrame(bucleAnimacion);
+})();
+</script>
+</body>
+</html>
